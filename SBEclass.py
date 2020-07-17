@@ -138,6 +138,8 @@ class SBEClass():
 
 
 		#Mean sep. between star forming regions		
+		print('Max separation:', 2.*h0, 2.*RGMC_mean)
+		
 		d0  = max(2*h0,2*RGMC_mean)
 		d0_ = d0*self.pc*1e2
 		
@@ -155,13 +157,15 @@ class SBEClass():
 		norm_all = np.trapz(dpdx_all, xspace_all)
 
 		#Calculate factor due to extinction
-		ext_factor = np.trapz(dpdx_all*np.exp(-xspace_all*(2.*d0/h0)*self.Cext), xspace_all)/norm_all
+		ext_factor = np.trapz(dpdx_all*np.exp(-xspace_all*(d0/h0)*self.Cext), xspace_all)/norm_all
 		phifactor = np.amax(np.array([np.ones(len(phispace)), phispace]), axis=0)
 
 		meanF =np.trapz(igrand*ext_factor*phifactor*self.Lambda_phi_func(phispace)/(d0_**2.), phispace)*self.Lcrit
 
 		self.F0f = meanF/self.G0
-
+		
+		print('Field flux calculation:', self.F0f)
+		
 		return self.F0f		
 
 
@@ -232,10 +236,11 @@ class SBEClass():
 		ssfrff = self.ssfrff_func(mach)
 		tff_ = tff*self.Myr
 
-		frac = 4*np.pi**2*self.G**2*tff_*Q**2*surfg**2/(self.phifb*0.012*tsn_**2*omega**2*x)
+		frac = 4.*np.pi**2*self.G**2*tff_*Q**2*surfg**2/(self.phifb*0.012*tsn_**2*omega**2*x)
 
-
-		return tsn/2.*(1.+np.sqrt(1.+frac))
+		tfb = tsn/2.*(1.+np.sqrt(1.+frac))
+		print('Feedback time-scale:', tfb)
+		return tfb
 
 
 	#factor to account for the fraction mass that collapses before fb
@@ -323,7 +328,8 @@ class SBEClass():
 		if sigma0==None:
 			sigma0=self.sigma0
 
-		sigmaGMC = sigma0*self.fgmc_func()
+		fgmc = self.fgmc_func()
+		sigmaGMC = sigma0*self.fSigma_func(fgmc)
 		return np.sqrt(MMC/(np.pi*sigmaGMC))
 
 	
@@ -1088,14 +1094,12 @@ class SBEClass():
 			plt.savefig('paper_figure_pchi0_CMZ.pdf', bbox_inches='tight', format='pdf')
 
 			plt.show()
-
-		
 		return pchi0_space
 
 
 	#Lognormal dispersion in max. stellar luminosity in region
 	def sigmaL_func(self, phi):
-		logphi_lim = np.log(phi)
+		logphi_lim = np.log10(phi)
 		logphi_lim = np.amax(np.array([-2.5*np.ones(len(phi)), logphi_lim]), axis=0)
 		return 8./((3. +logphi_lim)**2. )
 
@@ -1341,7 +1345,7 @@ class SBEClass():
 					tdispmg = self.tau_func(np.exp(rhomg), np.exp(Fmg), mstar=np.exp(msmg), alpha=ALPHA)
 				np.save(self.oname+'_tdisp_mgrid', np.array([msmg, rhomg, Fmg, tdispmg]))
 			else:
-				msmg, rhomg, Fmg, tdispmg = np.load(self.oname+'_tdisp_mgrid.npy')
+				msmg, rhomg, Fmg, tdispmg = np.load(self.oname+'_tdisp_mgrid.npy', allow_pickle=True)
 
 					
 			
@@ -1520,8 +1524,8 @@ class SBEClass():
 			
 		fname = self.oname+'_d2pdxdpsi'+suff
 		if os.path.isfile(fname+'.npy') and os.path.isfile(fname+'_pgrid.npy') and sl:
-			xd2pdxdpsi = np.load(fname+'.npy')
-			rhost_space,fuv_space = np.load(fname+'_pgrid.npy')
+			xd2pdxdpsi = np.load(fname+'.npy', allow_pickle=True)
+			rhost_space,fuv_space = np.load(fname+'_pgrid.npy', allow_pickle=True)
 		else:
 			xd2pdxdpsi = self.d2Fdydpsi_func(rhost_space,fuv_space, convolve=convolve, ext=extinct)
 			if sl:
